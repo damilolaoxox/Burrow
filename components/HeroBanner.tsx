@@ -63,10 +63,6 @@ export function HeroBanner({ onScrollToJoin }: HeroBannerProps) {
       </div>
 
       <div className="max-w-5xl mx-auto relative z-10 flex flex-col items-center text-center w-full">
-        <p className="cine-rise font-pixel text-[10px] sm:text-xs tracking-[0.4em] text-amber-300/80 mb-6" style={{ animationDelay: '0.9s' }}>
-          {BURROW_CONFIG.handle.toUpperCase()} PRESENTS
-        </p>
-
         <h1
           className="cine-rise cine-title font-pixel text-3xl sm:text-5xl md:text-6xl text-burrow-cream tracking-tight leading-tight mb-5"
           style={{ animationDelay: '1.3s' }}
