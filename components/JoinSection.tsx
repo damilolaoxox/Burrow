@@ -83,7 +83,6 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
 
   // Wallet
   const [walletAddress, setWalletAddress] = useState('');
-  const [isWalletConnecting, setIsWalletConnecting] = useState(false);
 
   // Submission
   const [isLoading, setIsLoading] = useState(false);
@@ -162,32 +161,6 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     }
   };
 
-  // Wallet Connection Handlers
-  const handleConnectBrowserWallet = async () => {
-    sounds.playClick();
-    setIsWalletConnecting(true);
-    setErrorMessage(null);
-
-    try {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const accounts = await (window as any).ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-        if (accounts && accounts.length > 0) {
-          setWalletAddress(accounts[0]);
-          sounds.playCoin();
-        }
-      } else {
-        // Fallback for browsers without Web3 wallet: suggest pasting
-        setErrorMessage('No Web3 wallet extension detected. You can paste any 0x EVM address directly below.');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to connect wallet');
-    } finally {
-      setIsWalletConnecting(false);
-    }
-  };
-
   // Submit Join Request
   const handleCompleteJoin = async () => {
     if (!isUsernameValid) {
@@ -213,30 +186,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     sounds.playClick();
 
     try {
-      // 1. Request nonce
-      const nonceRes = await fetch('/api/nonce');
-      const { nonce } = await nonceRes.json();
-
-      let signature: string | undefined = undefined;
-
-      // 2. Request signature if injected wallet is active
-      if (typeof window !== 'undefined' && (window as any).ethereum && walletAddress) {
-        try {
-          const message = `Join the Burrow waitlist\nX: @${cleanUsername}\nWallet: ${walletAddress.toLowerCase()}\nNonce: ${nonce}`;
-          const currentAccount = (window as any).ethereum.selectedAddress;
-
-          if (currentAccount && currentAccount.toLowerCase() === walletAddress.toLowerCase()) {
-            signature = await (window as any).ethereum.request({
-              method: 'personal_sign',
-              params: [message, walletAddress],
-            });
-          }
-        } catch (signErr) {
-          console.warn('Wallet signing skipped or rejected, proceeding with address verification:', signErr);
-        }
-      }
-
-      // 3. Post to /api/join
+      // Post to /api/join
       const response = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,8 +194,6 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
           xHandle: cleanUsername,
           taskProofs,
           wallet: walletAddress,
-          signature,
-          nonce,
           referredBy: referralCodeFromCookie,
         }),
       });
@@ -302,7 +250,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
   const handleShareOnX = () => {
     sounds.playClick();
     const refUrl = getReferralUrl();
-    const tweetText = `I just joined the ${BURROW_CONFIG.handle} waitlist. 2,500 miners, free mint on Robinhood Chain. Dig with me: ${refUrl}`;
+    const tweetText = `I just joined the ${BURROW_CONFIG.handle} waitlist. 2,500 miners on Robinhood Chain. Dig with me: ${refUrl}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(twitterUrl, '_blank');
   };
@@ -328,7 +276,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
         {/* Dynamic Generatable Miner Permit Card with PFP, Rank & Download */}
         <MinerIdCard
           handle={joinedUser.x_handle}
-          avatarUrl={joinedUser.x_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${joinedUser.x_handle}`}
+          avatarUrl={`/api/pfp?u=${joinedUser.x_handle}`}
           wallet={joinedUser.wallet}
           rank={userRank || 1}
           points={joinedUser.points}
@@ -379,13 +327,13 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
       <div className="bg-burrow-surface border-4 border-burrow-border shadow-pixel-lg p-6 sm:p-8">
         <div className="text-center mb-8">
           <div className="inline-block bg-burrow-gold text-black font-pixel text-[10px] px-3 py-1 mb-2 font-bold shadow-pixel-sm">
-            STEP-BY-STEP ALLOWLIST CLAIM
+            3 QUICK STEPS
           </div>
           <h2 className="font-pixel text-xl sm:text-2xl text-burrow-cream mb-2">
             JOIN THE BURROW WAITLIST
           </h2>
           <p className="font-silkscreen text-xs text-burrow-muted">
-            Complete the 3 quick steps below to reserve your miner allowlist spot.
+            Complete the steps below to join the waitlist.
           </p>
           {referralCodeFromCookie && (
             <div className="mt-3 inline-block bg-amber-950/60 border border-burrow-gold/50 px-3 py-1 text-[11px] font-pixel text-burrow-gold">
@@ -526,42 +474,24 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
 
           <div className="space-y-3">
             <p className="text-[11px] font-silkscreen text-burrow-muted">
-              Connect your Web3 wallet or paste any standard EVM address. Signing is 100% free with no gas.
+              Paste the EVM wallet address you want on the list.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="0x..."
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value.trim())}
-                className="flex-1 bg-burrow-card border-2 border-burrow-border px-3 py-2 text-xs font-mono text-amber-200 focus:border-burrow-gold focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleConnectBrowserWallet}
-                disabled={isWalletConnecting}
-                className="px-4 py-2 bg-burrow-surface hover:bg-burrow-card border-2 border-burrow-border hover:border-burrow-gold text-burrow-cream font-pixel text-xs shadow-pixel flex items-center justify-center gap-2 transition-colors"
-              >
-                <Wallet size={15} />
-                <span>{isWalletConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}</span>
-              </button>
-            </div>
-
-            {/* Quick autofill sample wallet for testing */}
-            <div className="flex items-center justify-between text-[10px] font-silkscreen text-burrow-muted">
-              <span>Standard 0x EVM address</span>
-              <button
-                type="button"
-                onClick={() => {
-                  sounds.playClick();
-                  setWalletAddress('0x71c800a855f46b7059a4b0a6a54b4b91b489a242');
-                }}
-                className="underline hover:text-burrow-gold"
-              >
-                Paste Demo 0x Address
-              </button>
-            </div>
+            <input
+              type="text"
+              placeholder="Paste your 0x wallet address"
+              value={walletAddress}
+              onChange={(e) => setWalletAddress(e.target.value.trim())}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full bg-burrow-card border-2 border-burrow-border px-3 py-2 text-xs font-mono text-amber-200 focus:border-burrow-gold focus:outline-none"
+            />
+            {walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress) && (
+              <p className="text-[10px] font-silkscreen text-red-400">
+                That doesn't look like a wallet address. It should start with 0x and be 42 characters.
+              </p>
+            )}
           </div>
         </div>
 
@@ -585,7 +515,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
             ) : (
               <>
                 <ShieldCheck size={20} />
-                <span>CLAIM ALLOWLIST SPOT & GET LINK</span>
+                <span>SUBMIT & GET MY CARD</span>
                 <ArrowRight size={18} />
               </>
             )}

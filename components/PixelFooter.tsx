@@ -39,9 +39,6 @@ export function PixelFooter() {
               <li className="text-burrow-muted">
                 2,500 Worker NFTs
               </li>
-              <li className="text-emerald-400">
-                Free Mint Allowlist
-              </li>
             </ul>
           </div>
         </div>

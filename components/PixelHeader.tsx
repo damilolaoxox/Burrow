@@ -51,7 +51,7 @@ export function PixelHeader({ onOpenAdmin }: PixelHeaderProps) {
               </span>
             </div>
             <p className="text-[10px] font-silkscreen text-burrow-muted hidden md:block">
-              Free Mint on Robinhood Chain
+              Dig through the mines
             </p>
           </div>
         </div>
@@ -113,13 +113,13 @@ export function PixelHeader({ onOpenAdmin }: PixelHeaderProps) {
             <span className="hidden sm:inline">{BURROW_CONFIG.handle}</span>
           </a>
 
-          {/* Admin Allowlist Access */}
+          {/* Admin Access */}
           <button
             onClick={() => {
               sounds.playClick();
               onOpenAdmin();
             }}
-            title="Admin Allowlist Export"
+            title="Admin"
             className="p-1.5 bg-burrow-surface hover:bg-burrow-card border-2 border-burrow-border hover:border-burrow-gold text-burrow-cream shadow-pixel-sm transition-all"
           >
             <Shield size={16} />

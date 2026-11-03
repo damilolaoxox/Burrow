@@ -9,11 +9,9 @@ import { AdminModal } from '@/components/AdminModal';
 import { BURROW_CONFIG } from '@/lib/config';
 
 export default function HomePage() {
-  const [totalSignups, setTotalSignups] = useState(1284);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [referralCookie, setReferralCookie] = useState<string | null>(null);
 
-  // Fetch initial stats
   useEffect(() => {
     // Check referral cookie from document.cookie
     if (typeof document !== 'undefined') {
@@ -23,19 +21,22 @@ export default function HomePage() {
       }
     }
 
-    const loadStats = async () => {
-      try {
-        const res = await fetch('/api/stats');
-        const data = await res.json();
-        if (data.totalSignups) {
-          setTotalSignups(data.totalSignups);
-        }
-      } catch (err) {
-        console.error('Failed to load initial stats:', err);
-      }
-    };
-
-    loadStats();
+    // Fade sections in as they scroll into view
+    const els = Array.from(document.querySelectorAll('.cine-reveal'));
+    if (!('IntersectionObserver' in window)) return;
+    document.documentElement.classList.add('js-reveal');
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-visible');
+            io.unobserve(e.target);
+          }
+        }),
+      { threshold: 0.12 }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, []);
 
   const scrollToJoin = () => {
@@ -45,31 +46,32 @@ export default function HomePage() {
     }
   };
 
-  const handleJoinSuccess = (entry: any, position: number) => {
-    setTotalSignups((prev) => prev + 1);
-  };
+  const handleJoinSuccess = (_entry: any, _position: number) => {};
 
   return (
     <div className="min-h-screen flex flex-col scanlines">
+      {/* Cinematic overlays: film grain + vignette */}
+      <div className="cine-grain" aria-hidden />
+      <div className="cine-vignette" aria-hidden />
+
       {/* Navigation Header */}
       <PixelHeader onOpenAdmin={() => setIsAdminOpen(true)} />
 
-      {/* Hero Banner with Live Urgency Counter & Pixel Miner Art */}
-      <HeroBanner
-        totalSignups={totalSignups}
-        onScrollToJoin={scrollToJoin}
-      />
+      {/* Hero Banner */}
+      <HeroBanner onScrollToJoin={scrollToJoin} />
 
-      {/* Step-by-Step Join Section / Miner Allowlist Pass */}
+      {/* Step-by-Step Join Section / Miner Card */}
+      <div className="cine-reveal">
       <JoinSection
         onJoinSuccess={handleJoinSuccess}
         referralCodeFromCookie={referralCookie}
       />
+      </div>
 
       {/* Footer & Disclaimer */}
       <PixelFooter />
 
-      {/* Admin Allowlist Modal */}
+      {/* Admin Modal */}
       <AdminModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}

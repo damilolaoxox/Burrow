@@ -13,7 +13,6 @@ interface AdminModalProps {
 export function AdminModal({ isOpen, onClose }: AdminModalProps) {
   const [adminKey, setAdminKey] = useState(BURROW_CONFIG.admin.defaultSecret);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [guaranteedCutoff, setGuaranteedCutoff] = useState(500);
   const [searchQuery, setSearchQuery] = useState('');
   const [entries, setEntries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,10 +78,10 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
           </div>
           <div>
             <h3 className="font-pixel text-lg text-burrow-cream">
-              BURROW ADMIN ALLOWLIST CONSOLE
+              BURROW ADMIN CONSOLE
             </h3>
             <p className="font-silkscreen text-xs text-burrow-muted">
-              Export verified participants for Merkle tree generation & Robinhood Chain contract deployment.
+              View and export everyone on the waitlist.
             </p>
           </div>
         </div>
@@ -127,33 +126,14 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
           /* Authenticated Dashboard */
           <div className="space-y-6">
             {/* Quick Stats & Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="p-3 bg-burrow-surface border-2 border-burrow-border">
-                <p className="text-[10px] font-pixel text-burrow-muted">TOTAL ALLOWLIST</p>
+                <p className="text-[10px] font-pixel text-burrow-muted">TOTAL SIGNUPS</p>
                 <p className="font-pixel text-lg text-emerald-400 mt-1">
                   {entries.length} Miners
                 </p>
               </div>
 
-              <div className="p-3 bg-burrow-surface border-2 border-burrow-border">
-                <p className="text-[10px] font-pixel text-burrow-muted">GUARANTEED SPOTS</p>
-                <input
-                  type="number"
-                  value={guaranteedCutoff}
-                  onChange={(e) => setGuaranteedCutoff(Number(e.target.value))}
-                  className="w-full bg-burrow-darkest border border-burrow-border px-2 py-0.5 mt-1 text-xs font-pixel text-burrow-gold"
-                />
-                <p className="text-[9px] font-silkscreen text-burrow-muted mt-1">
-                  Top #{guaranteedCutoff} get Guaranteed
-                </p>
-              </div>
-
-              <div className="p-3 bg-burrow-surface border-2 border-burrow-border">
-                <p className="text-[10px] font-pixel text-burrow-muted">FCFS REMAINING</p>
-                <p className="font-pixel text-lg text-amber-300 mt-1">
-                  {Math.max(0, entries.length - guaranteedCutoff)} Spots
-                </p>
-              </div>
             </div>
 
             {/* Action Bar */}
@@ -174,7 +154,7 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
                 className="w-full sm:w-auto px-5 py-2.5 bg-burrow-gold hover:bg-yellow-400 text-black font-pixel text-xs border-2 border-amber-200 shadow-pixel flex items-center justify-center gap-2 font-bold"
               >
                 <Download size={15} />
-                <span>DOWNLOAD ALLOWLIST CSV</span>
+                <span>DOWNLOAD WAITLIST CSV</span>
               </button>
             </div>
 
@@ -184,7 +164,6 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
                 <thead className="sticky top-0 bg-burrow-surface border-b-2 border-burrow-border text-[10px] font-pixel text-burrow-muted">
                   <tr>
                     <th className="p-2">RANK</th>
-                    <th className="p-2">PHASE</th>
                     <th className="p-2">X HANDLE</th>
                     <th className="p-2">WALLET</th>
                     <th className="p-2 text-right">POINTS</th>
@@ -193,22 +172,10 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
                 </thead>
                 <tbody className="divide-y divide-burrow-border/40">
                   {filteredEntries.slice(0, 100).map((entry, idx) => {
-                    const isGuaranteed = entry.rank <= guaranteedCutoff;
                     return (
                       <tr key={entry.id || idx} className="hover:bg-burrow-card/50">
                         <td className="p-2 font-pixel text-[11px] text-burrow-gold">
                           #{entry.rank || idx + 1}
-                        </td>
-                        <td className="p-2">
-                          <span
-                            className={`text-[9px] font-pixel px-1.5 py-0.5 border ${
-                              isGuaranteed
-                                ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400'
-                                : 'bg-blue-950/80 border-blue-500 text-blue-300'
-                            }`}
-                          >
-                            {isGuaranteed ? 'GUARANTEED' : 'FCFS'}
-                          </span>
                         </td>
                         <td className="p-2 text-burrow-cream">
                           @{entry.x_handle}
@@ -230,7 +197,7 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
             </div>
 
             <p className="text-[10px] font-silkscreen text-burrow-muted">
-              Note: This CSV directly feeds the Merkle tree generator for the Robinhood Chain ERC-721 smart contract allowlist phases.
+              The CSV includes each person's reply link so you can spot-check their tasks.
             </p>
           </div>
         )}

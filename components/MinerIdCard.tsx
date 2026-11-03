@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { sounds } from '@/lib/audio';
 import { BURROW_CONFIG } from '@/lib/config';
 import { PixelPickaxe, PixelCoin, PixelMiner } from './PixelMinerArt';
-import { Download, Share2, Twitter, CheckCircle, Sparkles, Shield, Camera } from 'lucide-react';
+import { Twitter, Camera, Clock } from 'lucide-react';
 
 interface MinerIdCardProps {
   handle: string;
@@ -34,7 +34,8 @@ export function MinerIdCard({
     ? `${window.location.origin}/r/${refCode}`
     : `https://burrow.xyz/r/${refCode}`;
 
-  const isGuaranteed = rank <= 500;
+  const fallbackAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanHandle}`;
+  const [imgSrc, setImgSrc] = useState(avatarUrl || fallbackAvatar);
 
   // Generate downloadable high-resolution PNG using HTML5 Canvas
   const handleDownloadPng = async () => {
@@ -111,16 +112,16 @@ export function MinerIdCard({
       // Photo frame backing
       ctx.fillStyle = '#0c0714';
       ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-      ctx.strokeStyle = isGuaranteed ? '#fbbf24' : '#38bdf8';
+      ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 6;
       ctx.strokeRect(avatarX, avatarY, avatarSize, avatarSize);
 
       // Draw Avatar Image or Fallback
-      if (avatarUrl) {
+      if (imgSrc) {
         try {
           const img = new Image();
           img.crossOrigin = 'anonymous';
-          img.src = avatarUrl;
+          img.src = imgSrc;
           await new Promise((resolve) => {
             img.onload = resolve;
             img.onerror = resolve; // Continue if CORS blocked
@@ -138,21 +139,21 @@ export function MinerIdCard({
       }
 
       // Rank Pill under photo
-      ctx.fillStyle = isGuaranteed ? '#fbbf24' : '#0284c7';
+      ctx.fillStyle = '#fbbf24';
       ctx.fillRect(avatarX, avatarY + avatarSize + 15, avatarSize, 50);
-      ctx.fillStyle = isGuaranteed ? '#000000' : '#ffffff';
+      ctx.fillStyle = '#000000';
       ctx.font = 'bold 22px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(`MINER #${rank}`, avatarX + avatarSize / 2, avatarY + avatarSize + 48);
       ctx.textAlign = 'left';
 
       // Status Pill
-      ctx.fillStyle = isGuaranteed ? '#14532d' : '#1e3a8a';
+      ctx.fillStyle = '#451a03';
       ctx.fillRect(avatarX, avatarY + avatarSize + 75, avatarSize, 40);
-      ctx.fillStyle = isGuaranteed ? '#86efac' : '#93c5fd';
+      ctx.fillStyle = '#fcd34d';
       ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(isGuaranteed ? '★ GUARANTEED MINT' : '◆ FCFS ALLOWLIST', avatarX + avatarSize / 2, avatarY + avatarSize + 101);
+      ctx.fillText('◷ STATUS: PENDING', avatarX + avatarSize / 2, avatarY + avatarSize + 101);
       ctx.textAlign = 'left';
 
       // Right: Worker Credentials Table
@@ -173,7 +174,7 @@ export function MinerIdCard({
 
       drawField('OPERATOR HANDLE', `@${cleanHandle}`, '#fbbf24', true);
       drawField('ROBINHOOD CHAIN WALLET', maskedWallet, '#38bdf8');
-      drawField('ALLOWLIST SCORE', `${points} POINTS (+10 BASE)`, '#4ade80');
+      drawField('MINER SCORE', `${points} POINTS`, '#4ade80');
       drawField('RECRUITS IN MINES', `${referrals} MINERS INVITED`, '#fde047');
 
       // Bottom Barcode & Seal Bar
@@ -209,7 +210,26 @@ export function MinerIdCard({
       // Right Seal
       ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 15px monospace';
-      ctx.fillText('FREE MINT • 0 ETH GAS ONLY', 880, 608);
+      ctx.fillText('2,500 WORKERS • ONE MINE', 900, 608);
+
+      // PENDING rubber stamp across the card
+      ctx.save();
+      ctx.translate(800, 330);
+      ctx.rotate((-14 * Math.PI) / 180);
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(-230, -70, 460, 140);
+      ctx.lineWidth = 4;
+      ctx.strokeRect(-214, -54, 428, 108);
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 92px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PENDING', 0, 6);
+      ctx.restore();
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
 
       // Convert to downloadable file
       const dataUrl = canvas.toDataURL('image/png');
@@ -237,7 +257,7 @@ export function MinerIdCard({
 
   const handleShareTweet = () => {
     sounds.playClick();
-    const tweetText = `Just secured my verified Miner Card for ${BURROW_CONFIG.handle}! 2,500 pixel workers with a free mint on Robinhood Chain. I'm Miner #${rank}. Dig with me: ${referralUrl}`;
+    const tweetText = `Just submitted my Miner Card for ${BURROW_CONFIG.handle}. Status: PENDING ⛏️ 2,500 pixel workers on Robinhood Chain. I'm Miner #${rank}. Dig with me: ${referralUrl}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
   };
 
@@ -272,12 +292,13 @@ export function MinerIdCard({
           <div className="flex flex-col items-center shrink-0">
             <div className="relative p-1.5 bg-burrow-darkest border-3 border-burrow-gold shadow-pixel-sm">
               <img
-                src={avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanHandle}`}
+                src={imgSrc}
+                onError={() => imgSrc !== fallbackAvatar && setImgSrc(fallbackAvatar)}
                 alt={cleanHandle}
                 className="w-24 h-24 sm:w-28 sm:h-28 object-cover bg-burrow-surface border border-burrow-border"
               />
-              <div className="absolute top-0 right-0 bg-emerald-500 text-black p-0.5 border border-black">
-                <CheckCircle size={14} />
+              <div className="absolute top-0 right-0 bg-amber-400 text-black p-0.5 border border-black">
+                <Clock size={14} />
               </div>
             </div>
 
@@ -285,12 +306,8 @@ export function MinerIdCard({
               <span className="inline-block bg-burrow-gold text-black font-pixel text-xs px-2.5 py-1 font-bold shadow-pixel-sm w-full">
                 MINER #{rank}
               </span>
-              <span className={`block mt-1 text-[9px] font-pixel px-1.5 py-0.5 border ${
-                isGuaranteed
-                  ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400'
-                  : 'bg-sky-950/80 border-sky-500 text-sky-300'
-              }`}>
-                {isGuaranteed ? '★ GUARANTEED' : '◆ FCFS PHASE'}
+              <span className="block mt-1 text-[9px] font-pixel px-1.5 py-0.5 border bg-amber-950/80 border-amber-500 text-amber-300">
+                ◷ PENDING REVIEW
               </span>
             </div>
           </div>
@@ -340,8 +357,21 @@ export function MinerIdCard({
             </span>
           </div>
           <span className="font-pixel text-[9px] text-amber-300 hidden sm:inline">
-            FREE MINT • 2,500 WORKERS
+            2,500 WORKERS • ONE MINE
           </span>
+        </div>
+
+        {/* PENDING rubber stamp */}
+        <div
+          className="cine-stamp pointer-events-none absolute top-1/2 left-1/2 z-10 border-[5px] border-red-500/85 px-4 py-1.5 sm:px-6 sm:py-2"
+          style={{ transform: 'translate(-50%, -50%) rotate(-14deg)', boxShadow: 'inset 0 0 0 3px rgba(0,0,0,0.25)' }}
+          aria-label="Status: pending"
+        >
+          <div className="border-2 border-red-500/85 px-3 py-1 sm:px-5">
+            <span className="font-pixel text-2xl sm:text-4xl text-red-500/90 tracking-widest drop-shadow-[2px_2px_0_rgba(0,0,0,0.6)]">
+              PENDING
+            </span>
+          </div>
         </div>
       </div>
 
@@ -361,7 +391,7 @@ export function MinerIdCard({
           className="flex-1 py-3 px-4 bg-sky-500 hover:bg-sky-400 text-black font-pixel text-xs border-2 border-sky-300 shadow-pixel flex items-center justify-center gap-2 font-bold transition-transform active:translate-y-0.5"
         >
           <Twitter size={16} />
-          <span>SHARE CARD ON X (+5 PTS)</span>
+          <span>SHARE CARD ON X</span>
         </button>
       </div>
     </div>

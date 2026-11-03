@@ -63,3 +63,177 @@ button:active {
   background-color: #fbbf24;
   color: #000000;
 }
+
+/* =========================================================
+   CINEMATIC LAYER
+   ========================================================= */
+
+/* Film grain (fixed, very subtle) */
+.cine-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: cineGrain 0.9s steps(6) infinite;
+}
+@keyframes cineGrain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-4%, 3%); }
+  40% { transform: translate(3%, -5%); }
+  60% { transform: translate(-2%, 6%); }
+  80% { transform: translate(5%, 2%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Dark edges, like a camera lens */
+.cine-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+/* Letterbox bars that slide open when the page loads */
+.cine-letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14vh;
+  background: #000;
+  z-index: 30;
+  pointer-events: none;
+  animation: cineLetterbox 1.6s cubic-bezier(0.7, 0, 0.2, 1) 0.4s forwards;
+}
+.cine-letterbox-top { top: 0; }
+.cine-letterbox-bottom { bottom: 0; }
+@keyframes cineLetterbox {
+  to { height: 0; }
+}
+
+/* Slow camera push-in on the cave */
+.cine-kenburns {
+  animation: cineKenBurns 24s ease-in-out infinite alternate;
+  transform-origin: 50% 40%;
+}
+@keyframes cineKenBurns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+/* Lantern flicker */
+.cine-lantern { animation: cineFlicker 5s ease-in-out infinite; }
+@keyframes cineFlicker {
+  0%, 100% { opacity: 0.9; }
+  8% { opacity: 0.65; }
+  10% { opacity: 0.95; }
+  45% { opacity: 0.8; }
+  47% { opacity: 1; }
+  70% { opacity: 0.75; }
+}
+
+/* Light shaft from the surface */
+.cine-shaft {
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.10), transparent 75%);
+  clip-path: polygon(40% 0, 60% 0, 85% 100%, 15% 100%);
+  filter: blur(6px);
+  animation: cineFlicker 7s ease-in-out infinite;
+}
+
+/* Dust drifting up through the light */
+.cine-dust {
+  position: absolute;
+  bottom: -10px;
+  background: #fde68a;
+  border-radius: 9999px;
+  opacity: 0;
+  box-shadow: 0 0 6px rgba(253, 230, 138, 0.8);
+  animation-name: cineDust;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes cineDust {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.5; }
+  100% { transform: translate(30px, -95vh); opacity: 0; }
+}
+
+/* Staggered title-card entrance */
+.cine-rise {
+  opacity: 0;
+  animation: cineRise 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes cineRise {
+  from { opacity: 0; transform: translateY(24px); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.cine-title {
+  text-shadow: 3px 3px 0 #000, 0 0 40px rgba(251, 191, 36, 0.25);
+}
+
+/* Gold light sweeping across the subtitle */
+.cine-shimmer {
+  background: linear-gradient(100deg, #b45309 0%, #fbbf24 35%, #fff7d6 50%, #fbbf24 65%, #b45309 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(2px 2px 0 #000);
+}
+.cine-shimmer.cine-rise {
+  animation: cineRise 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards, cineShimmer 5s linear 3s infinite;
+}
+@keyframes cineShimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* The buggy idles on its suspension */
+.cine-drive { animation: cineIdle 0.6s steps(2) infinite; }
+@keyframes cineIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Pulsing glow on the main button */
+.cine-glow { animation: cineGlow 2.6s ease-in-out infinite; }
+@keyframes cineGlow {
+  0%, 100% { box-shadow: 4px 4px 0 #000, 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 4px 4px 0 #000, 0 0 28px rgba(251, 191, 36, 0.55); }
+}
+
+/* Sections fade in as you scroll (only when JS is running) */
+.js-reveal .cine-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.js-reveal .cine-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* "PENDING" rubber stamp on the miner card */
+.cine-stamp {
+  animation: cineStamp 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) 0.4s both;
+}
+@keyframes cineStamp {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(2.4); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(-14deg) scale(1); }
+}
+
+/* Respect people who turn off motion */
+@media (prefers-reduced-motion: reduce) {
+  .cine-grain, .cine-kenburns, .cine-lantern, .cine-shaft, .cine-dust,
+  .cine-drive, .cine-glow, .cine-shimmer, .cine-letterbox {
+    animation: none !important;
+  }
+  .cine-letterbox { height: 0; }
+  .cine-dust { display: none; }
+  .cine-rise, .cine-stamp { animation: none !important; opacity: 1; filter: none; }
+  .js-reveal .cine-reveal { opacity: 1; transform: none; transition: none; }
+}

@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     const { entry, position } = await joinWaitlist({
       xId,
       xHandle: cleanHandle,
-      xAvatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanHandle}`,
+      xAvatar: `/api/pfp?u=${cleanHandle}`,
       wallet: normalizedWallet,
       refCode,
       referredBy: referralCookie,
