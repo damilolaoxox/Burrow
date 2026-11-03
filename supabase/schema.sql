@@ -10,10 +10,14 @@ create table if not exists waitlist (
   wallet text unique,
   ref_code text unique not null,
   referred_by text,
+  reply_url text,
   referrals int not null default 0,
   points int not null default 10,
   created_at timestamptz not null default now()
 );
+
+-- Adds the reply link column to a table created before it existed (safe to re-run)
+alter table waitlist add column if not exists reply_url text;
 
 -- 2. Indexes for fast leaderboards and referral queries
 create index if not exists waitlist_rank on waitlist (points desc, created_at asc);

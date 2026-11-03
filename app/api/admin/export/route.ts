@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   // Generate CSV format specified in guide:
   // rank,x_handle,wallet,points,referrals,ref_code,referred_by,created_at
-  const headers = ['Rank', 'X_Handle', 'Wallet_Address', 'Points', 'Referrals', 'Ref_Code', 'Referred_By', 'Created_At'];
+  const headers = ['Rank', 'X_Handle', 'Wallet_Address', 'Points', 'Referrals', 'Ref_Code', 'Referred_By', 'Reply_Link', 'Created_At'];
   const rows = data.map((item, idx) => [
     idx + 1,
     `@${item.x_handle}`,
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
     item.referrals,
     item.ref_code,
     item.referred_by || '',
+    item.reply_url || '',
     item.created_at,
   ]);
 

@@ -33,7 +33,7 @@ interface WaitlistEntryState {
   rank?: number;
 }
 
-type TaskKey = 'like' | 'reply' | 'follow';
+type TaskKey = 'like' | 'repost' | 'reply' | 'follow';
 
 const postId = BURROW_CONFIG.taskPostId;
 const TASKS: { id: TaskKey; label: string; url: string }[] = [
@@ -41,6 +41,11 @@ const TASKS: { id: TaskKey; label: string; url: string }[] = [
     id: 'like',
     label: 'LIKE THE BURROW POST',
     url: postId ? `https://x.com/intent/like?tweet_id=${postId}` : BURROW_CONFIG.xProfileUrl,
+  },
+  {
+    id: 'repost',
+    label: 'REPOST THE BURROW POST',
+    url: postId ? `https://x.com/intent/retweet?tweet_id=${postId}` : BURROW_CONFIG.xProfileUrl,
   },
   {
     id: 'reply',
@@ -73,6 +78,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
   const [taskTickets, setTaskTickets] = useState<Partial<Record<TaskKey, string>>>({});
   const [taskProofs, setTaskProofs] = useState<Partial<Record<TaskKey, string>>>({});
   const [taskBusy, setTaskBusy] = useState<TaskKey | null>(null);
+  const [replyLink, setReplyLink] = useState('');
   const allTasksDone = TASKS.every((t) => taskProofs[t.id]);
 
   // Wallet
@@ -101,6 +107,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     setUsernameInput(value);
     setTaskTickets({});
     setTaskProofs({});
+    setReplyLink('');
   };
 
   const handleTaskGo = async (task: (typeof TASKS)[number]) => {
@@ -136,11 +143,11 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
       const res = await fetch('/api/tasks/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticket }),
+        body: JSON.stringify({ ticket, replyUrl: taskId === 'reply' ? replyLink : undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data.reason !== 'too_soon') {
+        if (data.reason !== 'too_soon' && data.reason !== 'bad_link') {
           setTaskTickets((prev) => ({ ...prev, [taskId]: undefined }));
         }
         throw new Error(data.error);
@@ -307,6 +314,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     setUsernameInput('');
     setTaskTickets({});
     setTaskProofs({});
+    setReplyLink('');
     setWalletAddress('');
     setUserRank(null);
   };
@@ -440,17 +448,15 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
             </span>
           </div>
           <p className="text-[11px] font-silkscreen text-burrow-muted mb-3">
-            Tap GO to open X and do the task, then come back and tap CONFIRM.
+            Tap GO to open X and do the task, then come back and tap CONFIRM. For the reply, paste the link to your reply before confirming.
           </p>
           <div className="space-y-2">
             {TASKS.map((task) => {
               const done = Boolean(taskProofs[task.id]);
               const started = Boolean(taskTickets[task.id]);
               return (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between gap-2 p-2.5 bg-burrow-card border border-burrow-border"
-                >
+                <div key={task.id} className="p-2.5 bg-burrow-card border border-burrow-border">
+                <div className="flex items-center justify-between gap-2">
                   <span className={`font-pixel text-[10px] sm:text-xs ${done ? 'text-emerald-400' : 'text-burrow-cream'}`}>
                     {done ? '✓ ' : ''}{task.label}
                   </span>
@@ -471,7 +477,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
                       <button
                         type="button"
                         onClick={() => handleTaskConfirm(task.id)}
-                        disabled={!started || taskBusy === task.id}
+                        disabled={!started || taskBusy === task.id || (task.id === 'reply' && !replyLink.trim())}
                         className="px-3 py-1.5 text-[10px] font-pixel border border-burrow-gold text-burrow-gold bg-black/60 hover:bg-amber-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {taskBusy === task.id ? '...' : 'CONFIRM'}
@@ -479,12 +485,26 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
                     </div>
                   )}
                 </div>
+                {task.id === 'reply' && !done && started && (
+                  <input
+                    type="url"
+                    inputMode="url"
+                    placeholder="Paste the link to your reply (x.com/you/status/...)"
+                    value={replyLink}
+                    onChange={(e) => setReplyLink(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="mt-2 w-full bg-burrow-darkest border-2 border-burrow-border px-3 py-2 text-[11px] font-mono text-burrow-cream focus:border-sky-400 focus:outline-none"
+                  />
+                )}
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* STEP 2: WALLET ADDRESS */}
+        {/* STEP 3: WALLET ADDRESS */}
         <div className="mb-6 p-4 bg-burrow-darkest/70 border-2 border-burrow-border">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

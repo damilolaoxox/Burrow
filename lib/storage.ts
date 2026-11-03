@@ -9,6 +9,7 @@ export interface WaitlistEntry {
   wallet: string;
   ref_code: string;
   referred_by?: string | null;
+  reply_url?: string | null;
   referrals: number;
   points: number;
   created_at: string;
@@ -183,6 +184,7 @@ export async function joinWaitlist({
   wallet,
   refCode,
   referredBy,
+  replyUrl,
 }: {
   xId: string;
   xHandle: string;
@@ -190,6 +192,7 @@ export async function joinWaitlist({
   wallet: string;
   refCode: string;
   referredBy?: string | null;
+  replyUrl?: string | null;
 }): Promise<{ entry: WaitlistEntry; position: number }> {
   const normalizedWallet = wallet.toLowerCase();
   const cleanHandle = xHandle.replace(/^@/, '');
@@ -197,20 +200,25 @@ export async function joinWaitlist({
 
   if (isSupabaseConfigured && supabaseAdmin) {
     // Insert row
-    const { data: newEntry, error } = await supabaseAdmin
-      .from('waitlist')
-      .insert({
-        x_id: xId,
-        x_handle: cleanHandle,
-        x_avatar: xAvatar || null,
-        wallet: normalizedWallet,
-        ref_code: refCode,
-        referred_by: referredBy || null,
-        referrals: 0,
-        points: startingPoints,
-      })
-      .select()
-      .single();
+    const row: Record<string, unknown> = {
+      x_id: xId,
+      x_handle: cleanHandle,
+      x_avatar: xAvatar || null,
+      wallet: normalizedWallet,
+      ref_code: refCode,
+      referred_by: referredBy || null,
+      reply_url: replyUrl || null,
+      referrals: 0,
+      points: startingPoints,
+    };
+    let { data: newEntry, error } = await supabaseAdmin.from('waitlist').insert(row).select().single();
+
+    // If the reply_url column hasn't been added yet, save the signup without it
+    if (error && error.message?.includes('reply_url')) {
+      console.warn("waitlist.reply_url column missing; run supabase/schema.sql to add it.");
+      delete row.reply_url;
+      ({ data: newEntry, error } = await supabaseAdmin.from('waitlist').insert(row).select().single());
+    }
 
     if (error) {
       if (error.code === 'PGRST205' || error.message?.includes('waitlist')) {
@@ -243,6 +251,7 @@ export async function joinWaitlist({
     wallet: normalizedWallet,
     ref_code: refCode,
     referred_by: referredBy || null,
+    reply_url: replyUrl || null,
     referrals: 0,
     points: startingPoints,
     created_at: new Date().toISOString(),

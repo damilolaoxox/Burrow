@@ -3,7 +3,7 @@ import { isAddress, verifyMessage } from 'viem';
 import { nanoid } from 'nanoid';
 import { findByXId, findByWallet, joinWaitlist, getStats } from '@/lib/storage';
 import { BURROW_CONFIG } from '@/lib/config';
-import { hasAllProofs, normalizeHandle } from '@/lib/tasks';
+import { checkProofs, normalizeHandle } from '@/lib/tasks';
 
 // Simple in-memory IP rate limiter (5 requests per 10 minutes)
 const ipRateMap = new Map<string, { count: number; resetAt: number }>();
@@ -44,9 +44,10 @@ export async function POST(req: NextRequest) {
     }
     const xId = `x_${cleanHandle.toLowerCase()}`;
 
-    if (!hasAllProofs(taskProofs, cleanHandle)) {
+    const proofResult = checkProofs(taskProofs, cleanHandle);
+    if (!proofResult) {
       return NextResponse.json(
-        { error: 'Please complete all the tasks (Like, Reply, Follow) before joining.' },
+        { error: 'Please complete all the tasks (Like, Repost, Reply, Follow) before joining.' },
         { status: 400 }
       );
     }
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
       wallet: normalizedWallet,
       refCode,
       referredBy: referralCookie,
+      replyUrl: proofResult.replyUrl,
     });
 
     const { totalSignups } = await getStats();
