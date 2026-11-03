@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { PixelHeader } from '@/components/PixelHeader';
 import { HeroBanner } from '@/components/HeroBanner';
 import { JoinSection } from '@/components/JoinSection';
-import { Leaderboard } from '@/components/Leaderboard';
-import { BuggyGame } from '@/components/BuggyGame';
 import { FaqSection } from '@/components/FaqSection';
 import { PixelFooter } from '@/components/PixelFooter';
 import { AdminModal } from '@/components/AdminModal';
@@ -13,7 +11,6 @@ import { BURROW_CONFIG } from '@/lib/config';
 
 export default function HomePage() {
   const [totalSignups, setTotalSignups] = useState(1284);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [referralCookie, setReferralCookie] = useState<string | null>(null);
 
@@ -33,9 +30,6 @@ export default function HomePage() {
         const data = await res.json();
         if (data.totalSignups) {
           setTotalSignups(data.totalSignups);
-        }
-        if (data.leaderboard) {
-          setLeaderboard(data.leaderboard);
         }
       } catch (err) {
         console.error('Failed to load initial stats:', err);
@@ -71,15 +65,6 @@ export default function HomePage() {
       <JoinSection
         onJoinSuccess={handleJoinSuccess}
         referralCodeFromCookie={referralCookie}
-      />
-
-      {/* Playable Buggy Browser Prototype Teaser with 8-bit Sounds */}
-      <BuggyGame />
-
-      {/* Live Leaderboard (Top 10 Referrers & Recruits) */}
-      <Leaderboard
-        initialLeaderboard={leaderboard}
-        totalSignups={totalSignups}
       />
 
       {/* FAQ Intel */}
