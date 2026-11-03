@@ -2,7 +2,7 @@ export const BURROW_CONFIG = {
   name: 'Burrow',
   handle: '@Burrow',
   xProfileUrl: 'https://x.com/Burrow',
-  tagline: 'Dig through the mines. 2,500 workers. Free mint on Robinhood Chain.',
+  tagline: 'Dig through the mines. 2,500 workers. Free mint.',
   description: 'Underground Hill Climb–style driving game with a collection of 2,500 pixel miner NFTs ("workers") and a free mint on Robinhood Chain.',
   totalWorkers: 2500,
   mintCost: 'Free (0 ETH + gas)',

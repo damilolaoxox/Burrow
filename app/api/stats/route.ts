@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getLeaderboardAndStats } from '@/lib/storage';
+import { getStats } from '@/lib/storage';
 
 export async function GET() {
   try {
-    const stats = await getLeaderboardAndStats();
+    const stats = await getStats();
 
     return NextResponse.json(stats, {
       status: 200,

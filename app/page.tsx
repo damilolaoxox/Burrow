@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { PixelHeader } from '@/components/PixelHeader';
 import { HeroBanner } from '@/components/HeroBanner';
 import { JoinSection } from '@/components/JoinSection';
-import { FaqSection } from '@/components/FaqSection';
 import { PixelFooter } from '@/components/PixelFooter';
 import { AdminModal } from '@/components/AdminModal';
 import { BURROW_CONFIG } from '@/lib/config';
@@ -66,9 +65,6 @@ export default function HomePage() {
         onJoinSuccess={handleJoinSuccess}
         referralCodeFromCookie={referralCookie}
       />
-
-      {/* FAQ Intel */}
-      <FaqSection />
 
       {/* Footer & Disclaimer */}
       <PixelFooter />

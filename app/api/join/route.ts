@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress, verifyMessage } from 'viem';
 import { nanoid } from 'nanoid';
-import { findByXId, findByWallet, joinWaitlist, getLeaderboardAndStats } from '@/lib/storage';
+import { findByXId, findByWallet, joinWaitlist, getStats } from '@/lib/storage';
 import { BURROW_CONFIG } from '@/lib/config';
 
 // Simple in-memory IP rate limiter (5 requests per 10 minutes)
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Check if X user has already joined
     const existingByX = await findByXId(xId);
     if (existingByX) {
-      const { totalSignups } = await getLeaderboardAndStats();
+      const { totalSignups } = await getStats();
       return NextResponse.json({
         success: true,
         alreadyJoined: true,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
       referredBy: referralCookie,
     });
 
-    const { totalSignups } = await getLeaderboardAndStats();
+    const { totalSignups } = await getStats();
 
     return NextResponse.json({
       success: true,

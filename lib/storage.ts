@@ -263,32 +263,17 @@ export async function joinWaitlist({
   return { entry: newEntry, position };
 }
 
-export async function getLeaderboardAndStats() {
+export async function getStats() {
   if (isSupabaseConfigured && supabaseAdmin) {
     try {
-      // Total count
       const { count: totalSignups, error: countErr } = await supabaseAdmin
         .from('waitlist')
         .select('*', { count: 'exact', head: true });
 
-      // Top 10
-      const { data: top10, error: topErr } = await supabaseAdmin
-        .from('waitlist')
-        .select('id, x_handle, x_avatar, wallet, points, referrals, created_at')
-        .order('points', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(10);
-
-      if (!countErr && !topErr && top10 && top10.length > 0) {
-        const formattedLeaderboard = top10.map((item, index) => ({
-          ...item,
-          rank: index + 1,
-        }));
-
+      if (!countErr) {
         return {
           totalSignups: (totalSignups || 0) + 1240, // Base marketing seed offset
           realCount: totalSignups || 0,
-          leaderboard: formattedLeaderboard,
           isLiveDb: true,
         };
       }
@@ -298,26 +283,9 @@ export async function getLeaderboardAndStats() {
   }
 
   // Fallback in-memory
-  const sorted = [...fallbackWaitlist].sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-  });
-
-  const top10 = sorted.slice(0, 10).map((item, index) => ({
-    id: item.id,
-    x_handle: item.x_handle,
-    x_avatar: item.x_avatar,
-    wallet: item.wallet,
-    points: item.points,
-    referrals: item.referrals,
-    created_at: item.created_at,
-    rank: index + 1,
-  }));
-
   return {
     totalSignups: fallbackWaitlist.length + 1284,
     realCount: fallbackWaitlist.length,
-    leaderboard: top10,
     isLiveDb: false,
   };
 }
