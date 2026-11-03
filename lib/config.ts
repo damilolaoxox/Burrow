@@ -1,7 +1,7 @@
 export const BURROW_CONFIG = {
   name: 'Burrow',
-  handle: '@Burrow',
-  xProfileUrl: 'https://x.com/Burrow',
+  handle: '@burrowRH',
+  xProfileUrl: 'https://x.com/burrowRH',
   tagline: 'Dig through the mines. 2,500 workers. Free mint.',
   description: 'Underground Hill Climb–style driving game with a collection of 2,500 pixel miner NFTs ("workers") and a free mint on Robinhood Chain.',
   totalWorkers: 2500,
@@ -14,8 +14,13 @@ export const BURROW_CONFIG = {
     explorerUrl: 'https://robinhoodchain.blockscout.com',
     currency: 'ETH',
   },
+  xUsername: 'burrowRH',
+  // ID of the Burrow post people must like and reply to.
+  // It's the number at the end of the post link: x.com/burrowRH/status/<THIS NUMBER>
+  // While empty, the Like and Reply tasks open the @burrowRH profile instead.
+  taskPostId: '',
   socials: {
-    x: 'https://x.com/Burrow',
+    x: 'https://x.com/burrowRH',
     discord: 'https://discord.gg/burrow',
     github: 'https://github.com/burrow-game',
     docs: 'https://docs.robinhood.com/chain/deploy-smart-contracts',

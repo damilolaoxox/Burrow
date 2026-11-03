@@ -237,7 +237,7 @@ export function MinerIdCard({
 
   const handleShareTweet = () => {
     sounds.playClick();
-    const tweetText = `Just secured my verified Miner Card for @Burrow! 2,500 pixel workers with a free mint on Robinhood Chain. I'm Miner #${rank}. Dig with me: ${referralUrl}`;
+    const tweetText = `Just secured my verified Miner Card for ${BURROW_CONFIG.handle}! 2,500 pixel workers with a free mint on Robinhood Chain. I'm Miner #${rank}. Dig with me: ${referralUrl}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
   };
 

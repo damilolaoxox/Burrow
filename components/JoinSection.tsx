@@ -33,6 +33,27 @@ interface WaitlistEntryState {
   rank?: number;
 }
 
+type TaskKey = 'like' | 'reply' | 'follow';
+
+const postId = BURROW_CONFIG.taskPostId;
+const TASKS: { id: TaskKey; label: string; url: string }[] = [
+  {
+    id: 'like',
+    label: 'LIKE THE BURROW POST',
+    url: postId ? `https://x.com/intent/like?tweet_id=${postId}` : BURROW_CONFIG.xProfileUrl,
+  },
+  {
+    id: 'reply',
+    label: 'REPLY TO THE BURROW POST',
+    url: postId ? `https://x.com/intent/post?in_reply_to=${postId}` : BURROW_CONFIG.xProfileUrl,
+  },
+  {
+    id: 'follow',
+    label: `FOLLOW ${BURROW_CONFIG.handle.toUpperCase()}`,
+    url: `https://x.com/intent/follow?screen_name=${BURROW_CONFIG.xUsername}`,
+  },
+];
+
 interface JoinSectionProps {
   onJoinSuccess: (entry: WaitlistEntryState, position: number) => void;
   referralCodeFromCookie?: string | null;
@@ -44,9 +65,15 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
   const [userRank, setUserRank] = useState<number | null>(null);
 
   // Form Step States
-  const [xUser, setXUser] = useState<{ id: string; handle: string; avatar: string } | null>(null);
-  const [customHandleInput, setCustomHandleInput] = useState('');
-  const [hasFollowedX, setHasFollowedX] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const cleanUsername = usernameInput.trim().replace(/^@/, '');
+  const isUsernameValid = /^[A-Za-z0-9_]{1,15}$/.test(cleanUsername);
+
+  // Tasks: ticket = GO tapped (start time held by server), proof = confirmed
+  const [taskTickets, setTaskTickets] = useState<Partial<Record<TaskKey, string>>>({});
+  const [taskProofs, setTaskProofs] = useState<Partial<Record<TaskKey, string>>>({});
+  const [taskBusy, setTaskBusy] = useState<TaskKey | null>(null);
+  const allTasksDone = TASKS.every((t) => taskProofs[t.id]);
 
   // Wallet
   const [walletAddress, setWalletAddress] = useState('');
@@ -69,25 +96,63 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     } catch (e) {}
   }, []);
 
-  // X Connection Handlers
-  const handleConnectXMock = (handleToUse?: string) => {
-    sounds.playClick();
-    const handle = (handleToUse || customHandleInput || 'MinerKing').replace(/^@/, '');
-    if (!handle.trim()) return;
-
-    const mockXUser = {
-      id: `x_${handle.toLowerCase()}`,
-      handle: handle,
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${handle}`,
-    };
-    setXUser(mockXUser);
-    setErrorMessage(null);
+  // Changing the username resets tasks (they're tied to the username)
+  const handleUsernameChange = (value: string) => {
+    setUsernameInput(value);
+    setTaskTickets({});
+    setTaskProofs({});
   };
 
-  const handleFollowX = () => {
+  const handleTaskGo = async (task: (typeof TASKS)[number]) => {
+    if (!isUsernameValid) {
+      setErrorMessage('Enter your X username first.');
+      sounds.playError();
+      return;
+    }
     sounds.playClick();
-    window.open(BURROW_CONFIG.xProfileUrl, '_blank');
-    setHasFollowedX(true);
+    setErrorMessage(null);
+    // Open X first so mobile browsers don't block the new tab
+    window.open(task.url, '_blank', 'noopener,noreferrer');
+    try {
+      const res = await fetch('/api/tasks/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: task.id, handle: cleanUsername }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setTaskTickets((prev) => ({ ...prev, [task.id]: data.ticket }));
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Could not start the task. Try again.');
+    }
+  };
+
+  const handleTaskConfirm = async (taskId: TaskKey) => {
+    const ticket = taskTickets[taskId];
+    if (!ticket) return;
+    setTaskBusy(taskId);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/tasks/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.reason !== 'too_soon') {
+          setTaskTickets((prev) => ({ ...prev, [taskId]: undefined }));
+        }
+        throw new Error(data.error);
+      }
+      setTaskProofs((prev) => ({ ...prev, [taskId]: data.proof }));
+      sounds.playCoin();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Could not confirm. Try again.');
+      sounds.playError();
+    } finally {
+      setTaskBusy(null);
+    }
   };
 
   // Wallet Connection Handlers
@@ -118,8 +183,14 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
 
   // Submit Join Request
   const handleCompleteJoin = async () => {
-    if (!xUser) {
-      setErrorMessage('Please connect your X (Twitter) account first.');
+    if (!isUsernameValid) {
+      setErrorMessage('Please enter your X username first.');
+      sounds.playError();
+      return;
+    }
+
+    if (!allTasksDone) {
+      setErrorMessage('Please complete all the tasks first.');
       sounds.playError();
       return;
     }
@@ -144,7 +215,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
       // 2. Request signature if injected wallet is active
       if (typeof window !== 'undefined' && (window as any).ethereum && walletAddress) {
         try {
-          const message = `Join the Burrow waitlist\nX: @${xUser.handle}\nWallet: ${walletAddress.toLowerCase()}\nNonce: ${nonce}`;
+          const message = `Join the Burrow waitlist\nX: @${cleanUsername}\nWallet: ${walletAddress.toLowerCase()}\nNonce: ${nonce}`;
           const currentAccount = (window as any).ethereum.selectedAddress;
 
           if (currentAccount && currentAccount.toLowerCase() === walletAddress.toLowerCase()) {
@@ -163,9 +234,8 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          xId: xUser.id,
-          xHandle: xUser.handle,
-          xAvatar: xUser.avatar,
+          xHandle: cleanUsername,
+          taskProofs,
           wallet: walletAddress,
           signature,
           nonce,
@@ -225,7 +295,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
   const handleShareOnX = () => {
     sounds.playClick();
     const refUrl = getReferralUrl();
-    const tweetText = `I just joined the @Burrow waitlist. 2,500 miners, free mint on Robinhood Chain. Dig with me: ${refUrl}`;
+    const tweetText = `I just joined the ${BURROW_CONFIG.handle} waitlist. 2,500 miners, free mint on Robinhood Chain. Dig with me: ${refUrl}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(twitterUrl, '_blank');
   };
@@ -234,7 +304,9 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
     sounds.playClick();
     localStorage.removeItem('burrow_user_session');
     setJoinedUser(null);
-    setXUser(null);
+    setUsernameInput('');
+    setTaskTickets({});
+    setTaskProofs({});
     setWalletAddress('');
     setUserRank(null);
   };
@@ -305,7 +377,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
             JOIN THE BURROW WAITLIST
           </h2>
           <p className="font-silkscreen text-xs text-burrow-muted">
-            Complete the 2 quick verification steps below to reserve your miner allowlist spot.
+            Complete the 3 quick steps below to reserve your miner allowlist spot.
           </p>
           {referralCodeFromCookie && (
             <div className="mt-3 inline-block bg-amber-950/60 border border-burrow-gold/50 px-3 py-1 text-[11px] font-pixel text-burrow-gold">
@@ -322,111 +394,94 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
           </div>
         )}
 
-        {/* STEP 1: X ACCOUNT */}
+        {/* STEP 1: X USERNAME */}
         <div className="mb-6 p-4 bg-burrow-darkest/70 border-2 border-burrow-border">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className={`w-6 h-6 flex items-center justify-center font-pixel text-xs border ${
-                xUser ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-burrow-card text-burrow-gold border-burrow-gold'
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`w-6 h-6 flex items-center justify-center font-pixel text-xs border ${
+                isUsernameValid ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-burrow-card text-burrow-gold border-burrow-gold'
               }`}>
-                {xUser ? '✓' : '1'}
+                {isUsernameValid ? '✓' : '1'}
               </span>
-              <span className="font-pixel text-xs sm:text-sm text-burrow-cream">
-                CONNECT X (TWITTER) ACCOUNT
-              </span>
-            </div>
-            {xUser && (
-              <span className="text-[10px] font-pixel text-emerald-400 flex items-center gap-1">
-                <CheckCircle size={12} /> VERIFIED
-              </span>
-            )}
+            <span className="font-pixel text-xs sm:text-sm text-burrow-cream">
+              YOUR X USERNAME
+            </span>
           </div>
-
-          {!xUser ? (
-            <div className="space-y-3">
-              <p className="text-[11px] font-silkscreen text-burrow-muted">
-                Connect your X profile to prevent bot entries and link your social identity.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1 relative">
-                  <span className="absolute left-3 top-2.5 text-burrow-muted font-mono text-sm">@</span>
-                  <input
-                    type="text"
-                    placeholder="your_x_handle"
-                    value={customHandleInput}
-                    onChange={(e) => setCustomHandleInput(e.target.value)}
-                    className="w-full bg-burrow-card border-2 border-burrow-border pl-8 pr-3 py-2 text-xs font-mono text-burrow-cream focus:border-sky-400 focus:outline-none"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleConnectXMock()}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-black font-pixel text-xs border-2 border-sky-300 shadow-pixel flex items-center justify-center gap-2 font-bold"
-                >
-                  <Twitter size={15} />
-                  <span>SIGN IN WITH X</span>
-                </button>
-              </div>
-
-              {/* Sample quick picks for fast testing */}
-              <div className="flex items-center gap-2 text-[10px] font-silkscreen text-burrow-muted">
-                <span>Quick demo handles:</span>
-                {['miner_satoshi', 'cave_runner', 'gold_digger'].map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => {
-                      setCustomHandleInput(h);
-                      handleConnectXMock(h);
-                    }}
-                    className="underline hover:text-burrow-gold"
-                  >
-                    @{h}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-burrow-card border border-burrow-border">
-              <div className="flex items-center gap-3">
-                <img
-                  src={xUser.avatar}
-                  alt={xUser.handle}
-                  className="w-9 h-9 border border-burrow-gold bg-burrow-darkest"
-                />
-                <div>
-                  <div className="font-pixel text-xs text-burrow-cream">@{xUser.handle}</div>
-                  <div className="text-[10px] font-silkscreen text-burrow-muted">X Account Linked</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleFollowX}
-                  className={`px-3 py-1.5 text-[10px] font-pixel border shadow-pixel-sm flex items-center gap-1.5 ${
-                    hasFollowedX
-                      ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400'
-                      : 'bg-black/60 border-sky-400 text-sky-400 hover:bg-sky-900/30'
-                  }`}
-                >
-                  <Twitter size={12} />
-                  <span>{hasFollowedX ? 'FOLLOWED @BURROW' : 'FOLLOW @BURROW'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sounds.playClick();
-                    setXUser(null);
-                  }}
-                  className="text-[10px] font-silkscreen text-burrow-muted hover:text-red-400 underline"
-                >
-                  Change
-                </button>
-              </div>
-            </div>
+          <div className="relative">
+            <span className="absolute left-3 top-2.5 text-burrow-muted font-mono text-sm">@</span>
+            <input
+              type="text"
+              placeholder="your_x_username"
+              value={usernameInput}
+              onChange={(e) => handleUsernameChange(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={16}
+              className="w-full bg-burrow-card border-2 border-burrow-border pl-8 pr-3 py-2 text-xs font-mono text-burrow-cream focus:border-sky-400 focus:outline-none"
+            />
+          </div>
+          {usernameInput && !isUsernameValid && (
+            <p className="mt-2 text-[10px] font-silkscreen text-red-400">
+              Usernames use only letters, numbers and _ (max 15).
+            </p>
           )}
+        </div>
+
+        {/* STEP 2: X TASKS */}
+        <div className="mb-6 p-4 bg-burrow-darkest/70 border-2 border-burrow-border">
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`w-6 h-6 flex items-center justify-center font-pixel text-xs border ${
+                allTasksDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-burrow-card text-burrow-gold border-burrow-gold'
+              }`}>
+                {allTasksDone ? '✓' : '2'}
+              </span>
+            <span className="font-pixel text-xs sm:text-sm text-burrow-cream">
+              COMPLETE THE TASKS
+            </span>
+          </div>
+          <p className="text-[11px] font-silkscreen text-burrow-muted mb-3">
+            Tap GO to open X and do the task, then come back and tap CONFIRM.
+          </p>
+          <div className="space-y-2">
+            {TASKS.map((task) => {
+              const done = Boolean(taskProofs[task.id]);
+              const started = Boolean(taskTickets[task.id]);
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 p-2.5 bg-burrow-card border border-burrow-border"
+                >
+                  <span className={`font-pixel text-[10px] sm:text-xs ${done ? 'text-emerald-400' : 'text-burrow-cream'}`}>
+                    {done ? '✓ ' : ''}{task.label}
+                  </span>
+                  {done ? (
+                    <span className="text-[10px] font-pixel text-emerald-400 flex items-center gap-1 shrink-0">
+                      <CheckCircle size={12} /> DONE
+                    </span>
+                  ) : (
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleTaskGo(task)}
+                        disabled={!isUsernameValid}
+                        className="px-3 py-1.5 text-[10px] font-pixel border border-sky-400 text-sky-400 bg-black/60 hover:bg-sky-900/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                      >
+                        <Twitter size={11} /> GO
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleTaskConfirm(task.id)}
+                        disabled={!started || taskBusy === task.id}
+                        className="px-3 py-1.5 text-[10px] font-pixel border border-burrow-gold text-burrow-gold bg-black/60 hover:bg-amber-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {taskBusy === task.id ? '...' : 'CONFIRM'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* STEP 2: WALLET ADDRESS */}
@@ -438,7 +493,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
                   ? 'bg-emerald-500 text-black border-emerald-400'
                   : 'bg-burrow-card text-burrow-gold border-burrow-gold'
               }`}>
-                {walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress) ? '✓' : '2'}
+                {walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress) ? '✓' : '3'}
               </span>
               <span className="font-pixel text-xs sm:text-sm text-burrow-cream">
                 EVM WALLET (ROBINHOOD CHAIN)
@@ -494,10 +549,10 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
         <div className="pt-2">
           <button
             type="button"
-            disabled={isLoading || !xUser || !walletAddress}
+            disabled={isLoading || !isUsernameValid || !allTasksDone || !walletAddress}
             onClick={handleCompleteJoin}
             className={`w-full py-4 px-6 font-pixel text-sm sm:text-base border-4 shadow-pixel-lg flex items-center justify-center gap-3 transition-all ${
-              !xUser || !walletAddress
+              !isUsernameValid || !allTasksDone || !walletAddress
                 ? 'bg-burrow-card text-burrow-muted border-burrow-border cursor-not-allowed opacity-60'
                 : 'bg-burrow-gold hover:bg-yellow-400 text-black border-amber-200 active:translate-y-1 active:shadow-pixel font-bold'
             }`}
@@ -517,7 +572,7 @@ export function JoinSection({ onJoinSuccess, referralCodeFromCookie }: JoinSecti
           </button>
           
           <p className="text-[10px] font-silkscreen text-burrow-muted text-center mt-3">
-            By joining, you agree to Robinhood Chain EVM verification rules. 1 spot per wallet & X account.
+            By joining, you agree to Robinhood Chain EVM verification rules. 1 spot per wallet & X username.
           </p>
         </div>
       </div>

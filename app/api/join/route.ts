@@ -3,6 +3,7 @@ import { isAddress, verifyMessage } from 'viem';
 import { nanoid } from 'nanoid';
 import { findByXId, findByWallet, joinWaitlist, getStats } from '@/lib/storage';
 import { BURROW_CONFIG } from '@/lib/config';
+import { hasAllProofs, normalizeHandle } from '@/lib/tasks';
 
 // Simple in-memory IP rate limiter (5 requests per 10 minutes)
 const ipRateMap = new Map<string, { count: number; resetAt: number }>();
@@ -32,11 +33,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { xId, xHandle, xAvatar, wallet, signature, nonce } = body;
+    const { xHandle, wallet, signature, nonce, taskProofs } = body;
 
-    if (!xId || !xHandle) {
+    const cleanHandle = normalizeHandle(xHandle);
+    if (!cleanHandle) {
       return NextResponse.json(
-        { error: 'X (Twitter) account is required to join the waitlist.' },
+        { error: 'Please enter a valid X username (letters, numbers and _ only).' },
+        { status: 400 }
+      );
+    }
+    const xId = `x_${cleanHandle.toLowerCase()}`;
+
+    if (!hasAllProofs(taskProofs, cleanHandle)) {
+      return NextResponse.json(
+        { error: 'Please complete all the tasks (Like, Reply, Follow) before joining.' },
         { status: 400 }
       );
     }
@@ -49,7 +59,6 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedWallet = wallet.toLowerCase() as `0x${string}`;
-    const cleanHandle = xHandle.replace(/^@/, '');
 
     // Check if X user has already joined
     const existingByX = await findByXId(xId);
@@ -108,7 +117,7 @@ export async function POST(req: NextRequest) {
     const { entry, position } = await joinWaitlist({
       xId,
       xHandle: cleanHandle,
-      xAvatar: xAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanHandle}`,
+      xAvatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanHandle}`,
       wallet: normalizedWallet,
       refCode,
       referredBy: referralCookie,

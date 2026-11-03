@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Burrow - 2,500 Workers. Free Mint on Robinhood Chain.',
     description: 'Dig through the mines. Free mint allowlist now open.',
-    creator: '@Burrow',
+    creator: '@burrowRH',
     images: ['https://burrow.xyz/og-banner.png'],
   },
 };

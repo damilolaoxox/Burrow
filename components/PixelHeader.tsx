@@ -110,7 +110,7 @@ export function PixelHeader({ onOpenAdmin }: PixelHeaderProps) {
             title="Follow Burrow on X"
           >
             <Twitter size={14} />
-            <span className="hidden sm:inline">@Burrow</span>
+            <span className="hidden sm:inline">{BURROW_CONFIG.handle}</span>
           </a>
 
           {/* Admin Allowlist Access */}

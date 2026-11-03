@@ -33,7 +33,7 @@ export function PixelFooter() {
                   className="hover:text-burrow-gold flex items-center gap-1 text-sky-400"
                 >
                   <Twitter size={12} />
-                  <span>Follow @Burrow</span>
+                  <span>Follow {BURROW_CONFIG.handle}</span>
                 </a>
               </li>
               <li className="text-burrow-muted">
